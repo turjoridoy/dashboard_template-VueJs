@@ -27,3 +27,9 @@ npm run dev
 ```sh
 npm run build
 ```
+
+
+Credentials
+
+admin@gmail.com
+12345678
