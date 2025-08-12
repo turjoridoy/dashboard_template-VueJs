@@ -1,15 +1,30 @@
 <template>
   <a-layout class="h-screen">
-    <sidebar />
+    <sidebar ref="sidebarRef" />
     <a-layout>
-      <a-layout-header style="background: #fff">
-        <div class="flex justify-between items-center">
-          <div></div>
+      <a-layout-header class="bg-white">
+        <div class="flex justify-between items-center px-4 sm:px-6">
+          <!-- Mobile Menu Button -->
+          <div class="md:hidden">
+            <button
+              type="button"
+              class="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              @click="openMobileMenu"
+            >
+              <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Desktop Spacer -->
+          <div class="hidden md:block"></div>
+
           <div>
-            <div class="flex justify-end">
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <button
                 type="button"
-                class="px-5 py-1 border border-primary rounded bg-primary text-white hover:bg-transparent hover:text-primary"
+                class="px-3 sm:px-5 py-1 border border-primary rounded bg-primary text-white hover:bg-transparent hover:text-primary text-sm sm:text-base"
                 @click="getAllUsers()"
               >
                 <Spinner v-if="loading" />
@@ -17,7 +32,7 @@
               </button>
               <button
                 type="button"
-                class="text-primary font-semibold uppercase px-5"
+                class="text-primary font-semibold uppercase px-3 sm:px-5 text-sm sm:text-base"
                 @click="logout($router)"
               >
                 Logout
@@ -26,8 +41,8 @@
           </div>
         </div>
       </a-layout-header>
-      <a-layout-content style="margin: 16px 0 0">
-        <div class="px-10 py-8 bg-white h-full overflow-y-auto">
+      <a-layout-content class="mt-4">
+        <div class="px-4 sm:px-6 lg:px-10 py-4 sm:py-8 bg-white h-full overflow-y-auto">
           <!-- <p v-if="!hasPermission($route)">
             You don't have permission to view this page. Assign permission
             <span class="text-indigo-600 font-semibold">{{
@@ -40,7 +55,7 @@
           <slot></slot>
         </div>
       </a-layout-content>
-      <a-layout-footer class="border text-center" style="padding: 10px 16px">
+      <a-layout-footer class="border text-center px-4 py-2.5">
         Copyright &copy;{{ currYear }}
       </a-layout-footer>
     </a-layout>
@@ -55,6 +70,8 @@ import { hasPermission } from "@/utilities/common.js";
 import { getUsers } from "@/stores/users.js";
 import Spinner from "../spinner.vue";
 
+const sidebarRef = ref(null);
+
 const currYear = new Date().getFullYear();
 
 const logout = (router) => {
@@ -64,6 +81,11 @@ const logout = (router) => {
 };
 
 const loading = ref(false);
+
+const openMobileMenu = () => {
+  sidebarRef.value?.openMobileDrawer();
+};
+
 const getAllUsers = async () => {
   loading.value = true;
   const user_list = await getUsers();
@@ -79,12 +101,3 @@ const getAllUsers = async () => {
   window.location.reload();
 };
 </script>
-
-<style>
-.ant-layout-header {
-  height: auto !important;
-  line-height: normal !important;
-  padding-inline: 0 !important;
-  padding: 16px !important;
-}
-</style>

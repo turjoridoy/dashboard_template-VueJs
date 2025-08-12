@@ -3,11 +3,14 @@ import Cookies from "js-cookie";
 
 import Login from "@/views/login/index.vue";
 import Dashboard from "@/views/dashboard/index.vue";
-import Applicant from "@/views/applicant/index.vue";
+import Students from "@/views/students/index.vue";
+import Admission from "@/views/students/admission.vue";
 import About from "@/views/dashboard/about.vue";
 import User from "@/views/user/index.vue";
 import Role from "@/views/user/role.vue";
 import Permission from "@/views/user/permission.vue";
+import CollectFees from "@/views/fees/collect-fees.vue";
+import CollectedList from "@/views/fees/collected-list.vue";
 
 const routes = [
   {
@@ -21,9 +24,28 @@ const routes = [
     component: Dashboard,
   },
   {
-    path: "/applicant",
-    name: "applicant",
-    component: Applicant,
+    path: "/students",
+    name: "students",
+    component: Students,
+  },
+  {
+    path: "/students/admission",
+    name: "admission",
+    component: Admission,
+  },
+  {
+    path: "/fees",
+    redirect: "/fees/collect",
+  },
+  {
+    path: "/fees/collect",
+    name: "collect-fees",
+    component: CollectFees,
+  },
+  {
+    path: "/fees/collected",
+    name: "collected-list",
+    component: CollectedList,
   },
   {
     path: "/home/about",

@@ -1,0 +1,562 @@
+<script setup>
+import MainLayout from "@/components/layouts/mainLayout.vue";
+import FormField from "@/components/ui/FormField.vue";
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+// Sample fees data
+const collectedFees = ref([
+  {
+    id: 1,
+    studentName: "Sajib Ahmed",
+    studentId: "STU001",
+    amount: 5000,
+    month: "January 2024",
+    status: "Paid",
+    method: "Cash",
+    collectedBy: "Teacher 1",
+    collectedDate: "2024-01-15",
+    class: "Biology",
+    discount: 10
+  },
+  {
+    id: 2,
+    studentName: "Mustak Rahman",
+    studentId: "STU002",
+    amount: 7500,
+    month: "January 2024",
+    status: "Paid",
+    method: "Bank Transfer",
+    collectedBy: "Teacher 2",
+    collectedDate: "2024-01-16",
+    class: "Physics",
+    discount: 5
+  },
+  {
+    id: 3,
+    studentName: "Milan Khan",
+    studentId: "STU003",
+    amount: 3000,
+    month: "December 2023",
+    status: "Paid",
+    method: "Credit Card",
+    collectedBy: "Teacher 1",
+    collectedDate: "2024-01-10",
+    class: "Chemistry",
+    discount: 15
+  },
+  {
+    id: 4,
+    studentName: "Fatima Begum",
+    studentId: "STU004",
+    amount: 4500,
+    month: "January 2024",
+    status: "Pending",
+    method: "Mobile Banking",
+    collectedBy: "Teacher 3",
+    collectedDate: "2024-01-18",
+    class: "Mathematics",
+    discount: 0
+  },
+  {
+    id: 5,
+    studentName: "Rahim Ali",
+    studentId: "STU005",
+    amount: 6000,
+    month: "January 2024",
+    status: "Paid",
+    method: "Cash",
+    collectedBy: "Teacher 1",
+    collectedDate: "2024-01-20",
+    class: "English",
+    discount: 8
+  }
+]);
+
+const searchQuery = ref("");
+const selectedMonth = ref("");
+const selectedStatus = ref("");
+const selectedMethod = ref("");
+const viewMode = ref("table"); // "cards" or "table"
+
+const months = ["All", "January 2024", "December 2023", "November 2023", "October 2023"];
+const statuses = ["All", "Paid", "Pending", "Overdue"];
+const methods = ["All", "Cash", "Bank Transfer", "Credit Card", "Mobile Banking", "Check"];
+
+const filteredFees = computed(() => {
+  return collectedFees.value.filter(fee => {
+    const matchesSearch = fee.studentName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                         fee.studentId.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                         fee.collectedBy.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchesMonth = selectedMonth.value === "All" || selectedMonth.value === "" || fee.month === selectedMonth.value;
+    const matchesStatus = selectedStatus.value === "All" || selectedStatus.value === "" || fee.status === selectedStatus.value;
+    const matchesMethod = selectedMethod.value === "All" || selectedMethod.value === "" || fee.method === selectedMethod.value;
+
+    return matchesSearch && matchesMonth && matchesStatus && matchesMethod;
+  });
+});
+
+const totalAmount = computed(() => {
+  return collectedFees.value.reduce((sum, fee) => sum + fee.amount, 0);
+});
+
+const paidAmount = computed(() => {
+  return collectedFees.value.filter(fee => fee.status === 'Paid').reduce((sum, fee) => sum + fee.amount, 0);
+});
+
+const pendingAmount = computed(() => {
+  return collectedFees.value.filter(fee => fee.status === 'Pending').reduce((sum, fee) => sum + fee.amount, 0);
+});
+
+const thisMonthAmount = computed(() => {
+  return collectedFees.value.filter(fee => fee.month === 'January 2024').reduce((sum, fee) => sum + fee.amount, 0);
+});
+
+function editFee(id) {
+  alert(`Edit fee with ID: ${id}`);
+}
+
+function deleteFee(id) {
+  const confirmed = confirm("Are you sure you want to delete this fee record?");
+  if (confirmed) {
+    collectedFees.value = collectedFees.value.filter(fee => fee.id !== id);
+  }
+}
+
+function collectNewFee() {
+  router.push('/fees/collect');
+}
+
+function getStatusColor(status) {
+  const colors = {
+    "Paid": "bg-green-100 text-green-800",
+    "Pending": "bg-yellow-100 text-yellow-800",
+    "Overdue": "bg-red-100 text-red-800"
+  };
+  return colors[status] || "bg-gray-100 text-gray-800";
+}
+
+function getMethodColor(method) {
+  const colors = {
+    "Cash": "bg-blue-100 text-blue-800",
+    "Bank Transfer": "bg-purple-100 text-purple-800",
+    "Credit Card": "bg-green-100 text-green-800",
+    "Mobile Banking": "bg-orange-100 text-orange-800",
+    "Check": "bg-pink-100 text-pink-800"
+  };
+  return colors[method] || "bg-gray-100 text-gray-800";
+}
+
+function getClassColor(class_name) {
+  const colors = {
+    "Biology": "bg-blue-100 text-blue-800",
+    "Physics": "bg-purple-100 text-purple-800",
+    "Chemistry": "bg-green-100 text-green-800",
+    "Mathematics": "bg-orange-100 text-orange-800",
+    "English": "bg-pink-100 text-pink-800",
+    "Bangla": "bg-indigo-100 text-indigo-800"
+  };
+  return colors[class_name] || "bg-gray-100 text-gray-800";
+}
+
+function formatCurrency(amount) {
+  return new Intl.NumberFormat('en-BD', {
+    style: 'currency',
+    currency: 'BDT',
+    minimumFractionDigits: 0
+  }).format(amount);
+}
+</script>
+
+<template>
+  <MainLayout>
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-6">
+      <div class="mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Header Section -->
+        <div class="mb-8">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
+            <div class="flex items-center">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-teal-600 rounded-xl flex items-center justify-center mr-3 sm:mr-4 shadow-lg">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+              <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-800">All Collected Fees</h1>
+                <p class="text-sm sm:text-base text-gray-600">Manage and view all fee collection records</p>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <button
+                @click="collectNewFee"
+                class="flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-xl hover:from-green-600 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-green-200 transition-all duration-300 shadow-lg text-sm sm:text-base"
+              >
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Collect New Fee
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Collected</p>
+              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(totalAmount) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">Paid Amount</p>
+              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(paidAmount) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center">
+            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
+              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">Pending Amount</p>
+              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(pendingAmount) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-600">This Month</p>
+              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(thisMonthAmount) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters and Search -->
+      <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-8">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          <!-- Search -->
+          <div class="flex-1 max-w-md">
+            <div class="relative">
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search by student name, ID, or collector..."
+                class="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-300 text-sm sm:text-base"
+              />
+              <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 lg:space-x-4">
+            <FormField
+              label="Month"
+              type="select"
+              v-model="selectedMonth"
+              :options="months"
+              placeholder="All Months"
+            />
+
+            <FormField
+              label="Status"
+              type="select"
+              v-model="selectedStatus"
+              :options="statuses"
+              placeholder="All Status"
+            />
+
+            <FormField
+              label="Method"
+              type="select"
+              v-model="selectedMethod"
+              :options="methods"
+              placeholder="All Methods"
+            />
+
+            <!-- View Mode Toggle -->
+            <div class="flex bg-gray-100 rounded-xl p-1">
+              <button
+                @click="viewMode = 'cards'"
+                :class="[
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300',
+                  viewMode === 'cards'
+                    ? 'bg-white text-green-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                ]"
+              >
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                </svg>
+                Cards
+              </button>
+              <button
+                @click="viewMode = 'table'"
+                :class="[
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300',
+                  viewMode === 'table'
+                    ? 'bg-white text-green-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                ]"
+              >
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+                Table
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Count -->
+      <div class="mb-6">
+        <p class="text-gray-600">
+          Showing <span class="font-semibold text-gray-800">{{ filteredFees.length }}</span>
+          of <span class="font-semibold text-gray-800">{{ collectedFees.length }}</span> fee records
+        </p>
+      </div>
+
+      <!-- Cards View -->
+      <div v-if="viewMode === 'cards'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div
+          v-for="fee in filteredFees"
+          :key="fee.id"
+          class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+        >
+          <!-- Card Header -->
+          <div class="bg-gradient-to-r from-green-500 to-teal-600 p-4 text-white">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-bold text-lg">{{ fee.studentName }}</h3>
+                  <p class="text-green-100 text-sm">ID: {{ fee.studentId }}</p>
+                </div>
+              </div>
+              <span :class="[
+                'px-2 py-1 rounded-full text-xs font-semibold',
+                getStatusColor(fee.status)
+              ]">
+                {{ fee.status }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="p-6">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Amount:</span>
+                <span class="text-lg font-bold text-gray-800">{{ formatCurrency(fee.amount) }}</span>
+              </div>
+
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span class="text-sm text-gray-600">{{ fee.month }}</span>
+              </div>
+
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span class="text-sm text-gray-600">{{ fee.collectedBy }}</span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span :class="[
+                  'px-2 py-1 rounded-full text-xs font-semibold',
+                  getMethodColor(fee.method)
+                ]">
+                  {{ fee.method }}
+                </span>
+                <span class="text-xs text-gray-500">
+                  {{ new Date(fee.collectedDate).toLocaleDateString() }}
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span :class="[
+                  'px-2 py-1 rounded-full text-xs font-semibold',
+                  getClassColor(fee.class)
+                ]">
+                  {{ fee.class }}
+                </span>
+                <span v-if="fee.discount > 0" class="text-xs text-green-600 font-medium">
+                  {{ fee.discount }}% off
+                </span>
+              </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="flex space-x-2 mt-6 pt-4 border-t border-gray-100">
+              <button
+                @click="editFee(fee.id)"
+                class="flex-1 flex items-center justify-center px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-200 transition-all duration-300 text-sm font-medium"
+              >
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                Edit
+              </button>
+              <button
+                @click="deleteFee(fee.id)"
+                class="flex-1 flex items-center justify-center px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 transition-all duration-300 text-sm font-medium"
+              >
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div v-else class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full">
+            <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Month</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Method</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collected By</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr
+                v-for="fee in filteredFees"
+                :key="fee.id"
+                class="hover:bg-gray-50 transition-colors duration-200"
+              >
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-teal-600 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-white font-semibold text-sm">{{ fee.studentName.charAt(0) }}</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-semibold text-gray-900">{{ fee.studentName }}</div>
+                      <div class="text-sm text-gray-500">{{ fee.studentId }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-semibold text-gray-900">{{ formatCurrency(fee.amount) }}</div>
+                  <div v-if="fee.discount > 0" class="text-xs text-green-600">{{ fee.discount }}% discount</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ fee.month }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="[
+                    'px-2 py-1 rounded-full text-xs font-semibold',
+                    getStatusColor(fee.status)
+                  ]">
+                    {{ fee.status }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="[
+                    'px-2 py-1 rounded-full text-xs font-semibold',
+                    getMethodColor(fee.method)
+                  ]">
+                    {{ fee.method }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ fee.collectedBy }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ new Date(fee.collectedDate).toLocaleDateString() }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div class="flex space-x-2">
+                    <button
+                      @click="editFee(fee.id)"
+                      class="text-green-600 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-200 rounded-lg p-1"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button
+                      @click="deleteFee(fee.id)"
+                      class="text-red-600 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-200 rounded-lg p-1"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="filteredFees.length === 0" class="text-center py-12">
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No fee records found</h3>
+        <p class="text-gray-600 mb-6">Try adjusting your search or filter criteria</p>
+        <button
+          @click="collectNewFee"
+          class="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-xl hover:from-green-600 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-green-200 transition-all duration-300"
+        >
+          Collect New Fee
+        </button>
+      </div>
+    </div>
+  </div>
+  </MainLayout>
+</template>

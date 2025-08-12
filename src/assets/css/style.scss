@@ -111,5 +111,71 @@ select {
         fill: theme("colors.info") !important;
         opacity: 1 !important;
     }
+}
 
+/* Sidebar Styles */
+.ant-menu-item-selected,
+.ant-layout-sider-trigger,
+.ant-menu-item:not(.ant-menu-item-selected):hover {
+    background: #0d47a1 !important;
+}
+
+.ant-menu-sub.ant-menu-inline {
+    background: #0d47a11f !important;
+}
+
+.anticon svg {
+    opacity: 1;
+}
+
+/* Layout Styles */
+.ant-layout-header {
+    height: auto !important;
+    line-height: normal !important;
+    padding-inline: 0 !important;
+    padding: 16px !important;
+}
+
+/* Login Page Styles */
+.login {
+    background: url(@/assets/images/bg.jpg) no-repeat center;
+    background-size: cover;
+    min-height: 100vh;
+}
+
+.ant-input {
+    background: transparent;
+    color: #fff;
+}
+
+.ant-input::placeholder {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #fff;
+    opacity: 0.5;
+}
+
+.anticon {
+    svg {
+        fill: #fff !important;
+        opacity: 0.5;
+    }
+}
+
+/* Login Page Animation Delays */
+.animation-delay-1000 {
+    animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+    animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+    animation-delay: 4s;
 }
