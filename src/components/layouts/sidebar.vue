@@ -3,12 +3,12 @@
   <a-layout-sider
     v-model:collapsed="collapsed"
     collapsible
-    class="overflow-y-auto whitespace-nowrap hidden md:block"
+    class="overflow-y-auto whitespace-nowrap hidden md:block flex flex-col"
   >
     <div class="flex flex-col justify-center items-center my-2 px-2">
       <img
         v-if="!collapsed"
-        src="@/assets/images/logo-edubaksho.png"
+        src="@/assets/images/logo.png"
         alt="Logo"
         class="w-16 h-16 sm:w-20 sm:h-20 object-contain"
       />
@@ -29,6 +29,17 @@
       :items="items"
       @click="handleMenuClick"
     ></a-menu>
+
+    <!-- Desktop Logout Section -->
+    <div class="mt-auto p-4 border-t border-gray-700">
+      <button
+        @click="logout"
+        class="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+      >
+        <LogoutOutlined class="mr-2" />
+        <span v-if="!collapsed" class="font-medium">Logout</span>
+      </button>
+    </div>
   </a-layout-sider>
 
   <!-- Mobile Drawer -->
@@ -54,7 +65,7 @@
           </svg>
         </button>
         <img
-          src="@/assets/images/logo-edubaksho.png"
+          src="@/assets/images/logo.png"
           alt="Logo"
           class="w-20 h-20 object-contain mb-4"
         />
@@ -76,14 +87,26 @@
           class="border-0"
         ></a-menu>
       </div>
+
+      <!-- Mobile Logout Section -->
+      <div class="border-t border-gray-700 p-4">
+        <button
+          @click="logout"
+          class="w-full flex items-center justify-center px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500"
+        >
+          <LogoutOutlined class="mr-2" />
+          <span class="font-medium">Logout</span>
+        </button>
+      </div>
     </div>
   </a-drawer>
 </template>
 
 <script setup>
 import { ref, watch, reactive, h, onMounted, onUnmounted } from "vue";
-import { InboxOutlined, UserOutlined, DollarOutlined } from "@ant-design/icons-vue";
+import { InboxOutlined, UserOutlined, DollarOutlined, LogoutOutlined } from "@ant-design/icons-vue";
 import { useRoute, useRouter } from "vue-router";
+import Cookies from "js-cookie";
 
 const route = useRoute();
 const router = useRouter();
@@ -115,6 +138,15 @@ const handleMobileMenuClick = ({ key }) => {
     // Close drawer after navigation
     mobileDrawerOpen.value = false;
   }
+};
+
+// Logout function
+const logout = () => {
+  Cookies.remove("access_token");
+  Cookies.remove("refresh_token");
+  localStorage.clear();
+  mobileDrawerOpen.value = false;
+  router.push({ name: "login" });
 };
 
 // Expose mobile drawer controls

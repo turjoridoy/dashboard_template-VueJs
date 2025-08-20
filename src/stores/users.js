@@ -1,13 +1,13 @@
-import { apiBase, } from "@/config";
-import { getToken } from "@/utilities/common";
 import { showNotification } from "@/utilities/common";
-import axios from "axios";
+import { usersApi } from "@/api/users";
+import { rolesApi } from "@/api/roles";
+import { permissionsApi } from "@/api/permissions";
 
 /* ----- USER ----- */
 export const getUsers = async () => {
   let res = [];
   try {
-    res = await axios.get(`${apiBase}/user_list`, getToken());
+    res = await usersApi.list();
   } catch (error) {
     res = [];
     showNotification("error", error?.response?.data?.message || error?.message);
@@ -18,7 +18,7 @@ export const getUsers = async () => {
 export const createUser = async (form) => {
   let result = false;
   try {
-    const res = await axios.post(`${apiBase}/register`, form, getToken());
+    const res = await usersApi.create(form);
     showNotification(
       res?.data?.status?.toLowerCase(),
       res?.data?.message?.email?.at(-1) || res?.data?.message
@@ -35,11 +35,7 @@ export const createUser = async (form) => {
 export const updateUser = async (id, form) => {
   let result = false;
   try {
-    const res = await axios.put(
-      `${apiBase}/user_update/${id}`,
-      form,
-      getToken()
-    );
+    const res = await usersApi.update(id, form);
     showNotification(
       res?.data?.status?.toLowerCase(),
       res?.data?.message?.email?.at(-1) || res?.data?.message
@@ -57,7 +53,7 @@ export const deleteUser = async (id) => {
   console.log(id);
   let result = false;
   try {
-    const res = await axios.delete(`${apiBase}/user_delete/${id}`, getToken());
+    const res = await usersApi.remove(id);
     showNotification(res?.data?.status?.toLowerCase(), res?.data?.message);
     if (res?.data?.status?.toLowerCase() == "success") result = true;
   } catch (error) {
@@ -72,7 +68,7 @@ export const deleteUser = async (id) => {
 export const getRoles = async () => {
   let res = [];
   try {
-    res = await axios.get(`${apiBase}/roles`, getToken());
+    res = await rolesApi.list();
   } catch (error) {
     res = [];
     showNotification("error", error?.response?.data?.message || error?.message);
@@ -83,7 +79,7 @@ export const getRoles = async () => {
 export const createRole = async (form) => {
   let result = false;
   try {
-    const res = await axios.post(`${apiBase}/roles`, form, getToken());
+    const res = await rolesApi.create(form);
     showNotification(
       res?.data?.status?.toLowerCase(),
       res?.data?.message?.name?.at(-1) || res?.data?.message
@@ -100,7 +96,7 @@ export const createRole = async (form) => {
 export const updateRole = async (id, form) => {
   let result = false;
   try {
-    const res = await axios.put(`${apiBase}/roles/${id}`, form, getToken());
+    const res = await rolesApi.update(id, form);
     showNotification(res?.data?.status?.toLowerCase(), res?.data?.message?.email?.at(-1) || res?.data?.message)
     if (res?.data?.status?.toLowerCase() == 'success') result = true
   } catch (error) {
@@ -114,7 +110,7 @@ export const deleteRole = async (id) => {
 
   let result = false;
   try {
-    const res = await axios.delete(`${apiBase}/roles/${id}`, getToken());
+    const res = await rolesApi.remove(id);
     showNotification(res?.data?.status?.toLowerCase(), res?.data?.message)
     if (res?.data?.status?.toLowerCase() == 'success') result = true
   } catch (error) {
@@ -128,7 +124,7 @@ export const deleteRole = async (id) => {
 export const getPermissions = async () => {
   let res = [];
   try {
-    res = await axios.get(`${apiBase}/permissions`, getToken());
+    res = await permissionsApi.list();
   } catch (error) {
     res = [];
     showNotification("error", error?.response?.data?.message || error?.message);
@@ -141,7 +137,7 @@ export const createPermission = async (form) => {
   const name = form?.name?.toLowerCase().replace(/\s+/g, '-');
   let result = false;
   try {
-    const res = await axios.post(`${apiBase}/permissions`, { name: name }, getToken());
+    const res = await permissionsApi.create(name);
     showNotification(
       res?.data?.status?.toLowerCase(),
       res?.data?.message?.name?.at(-1) || res?.data?.message
@@ -159,11 +155,7 @@ export const updatePermission = async (id, form) => {
   const name = form?.name?.toLowerCase().replace(/\s+/g, '-');
   let result = false;
   try {
-    const res = await axios.put(
-      `${apiBase}/permissions/${id}?name=${name}`,
-      "",
-      getToken()
-    );
+    const res = await permissionsApi.update(id, name);
     showNotification(
       res?.data?.status?.toLowerCase(),
       res?.data?.message?.name?.at(-1) || res?.data?.message
@@ -180,7 +172,7 @@ export const updatePermission = async (id, form) => {
 export const deletePermission = async (id) => {
   let result = false;
   try {
-    const res = await axios.delete(`${apiBase}/permissions/${id}`, getToken());
+    const res = await permissionsApi.remove(id);
     showNotification(res?.data?.status?.toLowerCase(), res?.data?.message);
     if (res?.data?.status?.toLowerCase() == "success") result = true;
   } catch (error) {

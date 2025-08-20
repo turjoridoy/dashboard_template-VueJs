@@ -1,50 +1,54 @@
-import { apiBase } from "@/config"
 import { showNotification } from "@/utilities/common"
-import axios from "axios"
 import Cookies from "js-cookie"
+import { authApi } from "@/api/auth"
 
 export const login = async (data, router) => {
-    let isLoading = true;
     try {
-        // Using GET request with query parameters for the new API
-        const res = await axios.get(`${apiBase}/instructor/`, {
-            params: {
-                email: data.email,
-                password: data.password
-            }
+        const res = await authApi.login({
+            email: data.email,
+            password: data.password,
         });
 
-        isLoading = false;
+        if (res.status === 200 && res.data) {
+            const { access, refresh, instructor_id, name, organization_id } = res.data;
 
-        // Check if response is successful (200) and has data
-        if (res.status === 200 && res.data && res.data.length > 0) {
-            const userData = res.data[0]; // Get first user from array
+            // Store tokens securely in cookies
+            const isSecure = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+            Cookies.set("access_token", access, { secure: isSecure, sameSite: 'strict' });
+            Cookies.set("refresh_token", refresh, { secure: isSecure, sameSite: 'strict' });
 
-            // Store user data
-            Cookies.set("token", "authenticated"); // Placeholder token for now
-            localStorage.setItem("user_info", JSON.stringify(userData));
-
-            // Set basic permissions based on user role
-            const permissions = [];
-            if (userData.is_admin) {
-                permissions.push("admin");
-            }
-            if (userData.is_staff) {
-                permissions.push("staff");
-            }
-            localStorage.setItem("user_permissions", JSON.stringify(permissions));
+            // Store lightweight user info in localStorage`1234
+            const userInfo = { instructor_id, name, organization_id };
+            localStorage.setItem("user_info", JSON.stringify(userInfo));
+            localStorage.setItem("user_permissions", JSON.stringify([]));
 
             showNotification("success", "Login successful!");
             router.push({ name: "home" });
         } else {
-            showNotification("error", "Invalid credentials or user not found");
+            showNotification("error", "Invalid credentials");
         }
 
     } catch (err) {
-        isLoading = false;
-        Cookies.remove("token");
+        Cookies.remove("access_token");
+        Cookies.remove("refresh_token");
         localStorage.clear();
-        showNotification("error", err?.response?.data?.message || err?.message || "Login failed");
+        // Handle the new error response format
+        let errorMessage = "Login failed";
+        if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+            // New format: { errors: [{ code, param, details }] }
+            const firstError = err.response.data.errors[0];
+            errorMessage = firstError?.details || firstError?.code || "Authentication failed";
+        } else if (err?.response?.data?.detail) {
+            // Fallback to detail field
+            errorMessage = err.response.data.detail;
+        } else if (err?.response?.data?.message) {
+            // Fallback to message field
+            errorMessage = err.response.data.message;
+        } else if (err?.message) {
+            // Network or other errors
+            errorMessage = err.message;
+        }
+        showNotification("error", errorMessage);
+        throw err; // Re-throw the error so the component can handle it
     }
-    return 1;
 }

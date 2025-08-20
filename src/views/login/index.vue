@@ -27,13 +27,7 @@
           <p class="text-gray-600">Sign in to your account to continue</p>
         </div>
         <form
-          @submit.prevent="
-            async () => {
-              isLoading = true;
-              let res = await login(form, $router);
-              res && (isLoading = false);
-            }
-          "
+          @submit.prevent="handleLogin"
           class="space-y-6"
         >
           <!-- Email Field -->
@@ -148,7 +142,11 @@
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { login } from "@/stores/login.js";
+import { showNotification } from "@/utilities/common";
+
+const router = useRouter();
 
 const form = ref({
   email: "",
@@ -158,4 +156,23 @@ const form = ref({
 const isLoading = ref(false);
 const showPassword = ref(false);
 const rememberMe = ref(false);
+
+const handleLogin = async () => {
+  console.log("Login attempt with:", form.value); // Debug log
+
+  if (!form.value.email || !form.value.password) {
+    showNotification("error", "Please enter both email and password");
+    return;
+  }
+
+  isLoading.value = true;
+  try {
+    await login(form.value, router);
+  } catch (error) {
+    console.error("Login error:", error);
+    console.log("Form data after error:", form.value); // Debug: check if form data persists
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>

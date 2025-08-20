@@ -1,12 +1,10 @@
-import { apiBase, } from "@/config"
-import { getToken } from "@/utilities/common"
 import { showNotification } from "@/utilities/common"
-import axios from "axios"
+import { setupApi } from "@/api/setup"
 
 export const getAllBranch = async () => {
     let res = [];
     try {
-        res = await axios.get(`${apiBase}/all-branch`, getToken())
+        res = await setupApi.allBranch()
     } catch (error) {
         res = [];
         showNotification("error", error?.response?.data?.message || error?.message)

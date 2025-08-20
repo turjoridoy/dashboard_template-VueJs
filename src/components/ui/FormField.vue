@@ -48,7 +48,7 @@ defineEmits(['update:modelValue']);
     </label>
 
     <!-- Text/Number Input -->
-    <div v-if="type === 'text' || type === 'number' || type === 'date'" class="relative">
+    <div v-if="type === 'text' || type === 'number' || type === 'date' || type === 'month'" class="relative">
       <input
         :type="type"
         :placeholder="placeholder"

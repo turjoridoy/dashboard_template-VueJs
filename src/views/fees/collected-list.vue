@@ -1,7 +1,7 @@
 <script setup>
 import MainLayout from "@/components/layouts/mainLayout.vue";
 import FormField from "@/components/ui/FormField.vue";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -79,7 +79,10 @@ const searchQuery = ref("");
 const selectedMonth = ref("");
 const selectedStatus = ref("");
 const selectedMethod = ref("");
-const viewMode = ref("table"); // "cards" or "table"
+const isLoading = ref(true);
+const currentPage = ref(1);
+const pageSize = ref(10);
+
 
 const months = ["All", "January 2024", "December 2023", "November 2023", "October 2023"];
 const statuses = ["All", "Paid", "Pending", "Overdue"];
@@ -98,6 +101,13 @@ const filteredFees = computed(() => {
   });
 });
 
+const totalCount = computed(() => filteredFees.value.length);
+const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize.value)));
+const pagedFees = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredFees.value.slice(start, start + pageSize.value);
+});
+
 const totalAmount = computed(() => {
   return collectedFees.value.reduce((sum, fee) => sum + fee.amount, 0);
 });
@@ -114,8 +124,43 @@ const thisMonthAmount = computed(() => {
   return collectedFees.value.filter(fee => fee.month === 'January 2024').reduce((sum, fee) => sum + fee.amount, 0);
 });
 
+onMounted(() => {
+  // initial shimmer
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 400);
+});
+
+watch([searchQuery, selectedMonth, selectedStatus, selectedMethod], () => {
+  // show brief shimmer on filter/search change
+  isLoading.value = true;
+  currentPage.value = 1;
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 250);
+});
+
+watch(filteredFees, () => {
+  // Ensure current page is within range after filtering
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = 1;
+  }
+});
+
+function goNext() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value += 1;
+  }
+}
+
+function goPrev() {
+  if (currentPage.value > 1) {
+    currentPage.value -= 1;
+  }
+}
+
 function editFee(id) {
-  alert(`Edit fee with ID: ${id}`);
+  router.push({ name: 'edit-fee', params: { id: id } });
 }
 
 function deleteFee(id) {
@@ -307,153 +352,60 @@ function formatCurrency(amount) {
               placeholder="All Methods"
             />
 
-            <!-- View Mode Toggle -->
-            <div class="flex bg-gray-100 rounded-xl p-1">
-              <button
-                @click="viewMode = 'cards'"
-                :class="[
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300',
-                  viewMode === 'cards'
-                    ? 'bg-white text-green-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                ]"
-              >
-                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                </svg>
-                Cards
-              </button>
-              <button
-                @click="viewMode = 'table'"
-                :class="[
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300',
-                  viewMode === 'table'
-                    ? 'bg-white text-green-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                ]"
-              >
-                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                </svg>
-                Table
-              </button>
-            </div>
+
           </div>
         </div>
       </div>
 
-      <!-- Results Count -->
-      <div class="mb-6">
+      <!-- Results Count and Pagination -->
+      <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <p class="text-gray-600">
-          Showing <span class="font-semibold text-gray-800">{{ filteredFees.length }}</span>
-          of <span class="font-semibold text-gray-800">{{ collectedFees.length }}</span> fee records
+          Showing <span class="font-semibold text-gray-800">{{ pagedFees.length }}</span>
+          of <span class="font-semibold text-gray-800">{{ totalCount }}</span> fee records
         </p>
-      </div>
 
-      <!-- Cards View -->
-      <div v-if="viewMode === 'cards'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <div
-          v-for="fee in filteredFees"
-          :key="fee.id"
-          class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-        >
-          <!-- Card Header -->
-          <div class="bg-gradient-to-r from-green-500 to-teal-600 p-4 text-white">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 class="font-bold text-lg">{{ fee.studentName }}</h3>
-                  <p class="text-green-100 text-sm">ID: {{ fee.studentId }}</p>
-                </div>
-              </div>
-              <span :class="[
-                'px-2 py-1 rounded-full text-xs font-semibold',
-                getStatusColor(fee.status)
-              ]">
-                {{ fee.status }}
-              </span>
-            </div>
-          </div>
+        <!-- Pagination Controls -->
+        <div class="flex items-center space-x-2">
+          <button
+            @click="goPrev"
+            :disabled="currentPage === 1"
+            :class="[
+              'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200',
+              currentPage > 1
+                ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            ]"
+          >
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Previous
+          </button>
 
-          <!-- Card Body -->
-          <div class="p-6">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Amount:</span>
-                <span class="text-lg font-bold text-gray-800">{{ formatCurrency(fee.amount) }}</span>
-              </div>
+          <span class="px-3 py-2 text-sm text-gray-600">
+            Page {{ currentPage }} of {{ totalPages }}
+          </span>
 
-              <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-                <span class="text-sm text-gray-600">{{ fee.month }}</span>
-              </div>
-
-              <div class="flex items-center">
-                <svg class="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-                <span class="text-sm text-gray-600">{{ fee.collectedBy }}</span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span :class="[
-                  'px-2 py-1 rounded-full text-xs font-semibold',
-                  getMethodColor(fee.method)
-                ]">
-                  {{ fee.method }}
-                </span>
-                <span class="text-xs text-gray-500">
-                  {{ new Date(fee.collectedDate).toLocaleDateString() }}
-                </span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span :class="[
-                  'px-2 py-1 rounded-full text-xs font-semibold',
-                  getClassColor(fee.class)
-                ]">
-                  {{ fee.class }}
-                </span>
-                <span v-if="fee.discount > 0" class="text-xs text-green-600 font-medium">
-                  {{ fee.discount }}% off
-                </span>
-              </div>
-            </div>
-
-            <!-- Card Actions -->
-            <div class="flex space-x-2 mt-6 pt-4 border-t border-gray-100">
-              <button
-                @click="editFee(fee.id)"
-                class="flex-1 flex items-center justify-center px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-200 transition-all duration-300 text-sm font-medium"
-              >
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-                Edit
-              </button>
-              <button
-                @click="deleteFee(fee.id)"
-                class="flex-1 flex items-center justify-center px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 transition-all duration-300 text-sm font-medium"
-              >
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                Delete
-              </button>
-            </div>
-          </div>
+          <button
+            @click="goNext"
+            :disabled="currentPage === totalPages"
+            :class="[
+              'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200',
+              currentPage < totalPages
+                ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            ]"
+          >
+            Next
+            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <!-- Table View -->
-      <div v-else class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <!-- Fees Table -->
+      <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="min-w-full">
             <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -468,9 +420,46 @@ function formatCurrency(amount) {
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody v-if="isLoading" class="bg-white divide-y divide-gray-200">
+              <tr v-for="n in 8" :key="'skeleton-fee-'+n" class="animate-pulse">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gray-200 rounded-full mr-3"></div>
+                    <div>
+                      <div class="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                      <div class="h-3 bg-gray-200 rounded w-20"></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-4 bg-gray-200 rounded w-20"></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-4 bg-gray-200 rounded w-24"></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-6 bg-gray-200 rounded w-16"></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-6 bg-gray-200 rounded w-20"></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-4 bg-gray-200 rounded w-24"></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-4 bg-gray-200 rounded w-24"></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex space-x-2">
+                    <div class="w-6 h-6 bg-gray-200 rounded"></div>
+                    <div class="w-6 h-6 bg-gray-200 rounded"></div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tbody v-else class="bg-white divide-y divide-gray-200">
               <tr
-                v-for="fee in filteredFees"
+                v-for="fee in pagedFees"
                 :key="fee.id"
                 class="hover:bg-gray-50 transition-colors duration-200"
               >
@@ -537,6 +526,44 @@ function formatCurrency(amount) {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Bottom Pagination -->
+      <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0" v-if="totalCount > 0">
+        <div class="text-sm text-gray-600">Page {{ currentPage }} of {{ totalPages }}</div>
+        <div class="flex items-center space-x-2">
+          <button
+            @click="goPrev"
+            :disabled="currentPage === 1"
+            :class="[
+              'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200',
+              currentPage > 1
+                ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            ]"
+          >
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Previous
+          </button>
+
+          <button
+            @click="goNext"
+            :disabled="currentPage === totalPages"
+            :class="[
+              'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200',
+              currentPage < totalPages
+                ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            ]"
+          >
+            Next
+            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
