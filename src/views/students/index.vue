@@ -292,7 +292,7 @@ function goPrev() {
         <!-- Students Table -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="min-w-full">
+            <table class="min-w-full edb-table">
               <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
                   <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>

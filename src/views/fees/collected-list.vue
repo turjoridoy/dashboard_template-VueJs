@@ -6,7 +6,7 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-// Sample fees data
+// Sample fees data (now includes branch)
 const collectedFees = ref([
   {
     id: 1,
@@ -19,7 +19,8 @@ const collectedFees = ref([
     collectedBy: "Teacher 1",
     collectedDate: "2024-01-15",
     class: "Biology",
-    discount: 10
+    discount: 10,
+    branch: "Uttara"
   },
   {
     id: 2,
@@ -32,7 +33,8 @@ const collectedFees = ref([
     collectedBy: "Teacher 2",
     collectedDate: "2024-01-16",
     class: "Physics",
-    discount: 5
+    discount: 5,
+    branch: "Mirpur"
   },
   {
     id: 3,
@@ -45,7 +47,8 @@ const collectedFees = ref([
     collectedBy: "Teacher 1",
     collectedDate: "2024-01-10",
     class: "Chemistry",
-    discount: 15
+    discount: 15,
+    branch: "Banani"
   },
   {
     id: 4,
@@ -53,12 +56,13 @@ const collectedFees = ref([
     studentId: "STU004",
     amount: 4500,
     month: "January 2024",
-    status: "Pending",
+    status: "Paid",
     method: "Mobile Banking",
     collectedBy: "Teacher 3",
     collectedDate: "2024-01-18",
     class: "Mathematics",
-    discount: 0
+    discount: 0,
+    branch: "Uttara"
   },
   {
     id: 5,
@@ -71,58 +75,81 @@ const collectedFees = ref([
     collectedBy: "Teacher 1",
     collectedDate: "2024-01-20",
     class: "English",
-    discount: 8
+    discount: 8,
+    branch: "Mirpur"
   }
 ]);
 
 const searchQuery = ref("");
 const selectedMonth = ref("");
-const selectedStatus = ref("");
-const selectedMethod = ref("");
 const isLoading = ref(true);
 const currentPage = ref(1);
 const pageSize = ref(10);
 
+// Date filter controls
+const dateFilterMode = ref("today"); // 'today' | 'month' | 'custom'
+const customStartDate = ref("");
+const customEndDate = ref("");
+const dateModes = [
+  { label: "Today", value: "today" },
+  { label: "Current Month", value: "month" },
+  { label: "Custom", value: "custom" },
+];
 
-const months = ["All", "January 2024", "December 2023", "November 2023", "October 2023"];
-const statuses = ["All", "Paid", "Pending", "Overdue"];
-const methods = ["All", "Cash", "Bank Transfer", "Credit Card", "Mobile Banking", "Check"];
+// Branch filtering
+const selectedBranch = ref("");
+const branches = ["All", "Uttara", "Mirpur", "Banani", "Dhanmondi"];
+
+function isSameDay(d1, d2) {
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+}
+
+const currentMonthLabel = computed(() => new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }));
 
 const filteredFees = computed(() => {
-  return collectedFees.value.filter(fee => {
-    const matchesSearch = fee.studentName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         fee.studentId.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         fee.collectedBy.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchesMonth = selectedMonth.value === "All" || selectedMonth.value === "" || fee.month === selectedMonth.value;
-    const matchesStatus = selectedStatus.value === "All" || selectedStatus.value === "" || fee.status === selectedStatus.value;
-    const matchesMethod = selectedMethod.value === "All" || selectedMethod.value === "" || fee.method === selectedMethod.value;
+  const today = new Date();
+  const start = customStartDate.value ? new Date(customStartDate.value) : null;
+  const end = customEndDate.value ? new Date(customEndDate.value) : null;
 
-    return matchesSearch && matchesMonth && matchesStatus && matchesMethod;
-  });
+  return collectedFees.value
+    .filter(fee => fee.status === 'Paid') // enforce only paid
+    .filter(fee => {
+      const matchesSearch = fee.studentName.toLowerCase().includes((searchQuery.value || '').toLowerCase()) ||
+                           fee.studentId.toLowerCase().includes((searchQuery.value || '').toLowerCase()) ||
+                           fee.collectedBy.toLowerCase().includes((searchQuery.value || '').toLowerCase());
+
+      const feeDate = new Date(fee.collectedDate);
+
+      let matchesDate = true;
+      if (dateFilterMode.value === 'today') {
+        matchesDate = isSameDay(feeDate, today);
+      } else if (dateFilterMode.value === 'month') {
+        matchesDate = feeDate.getMonth() === today.getMonth() && feeDate.getFullYear() === today.getFullYear();
+      } else if (dateFilterMode.value === 'custom') {
+        if (start && end) {
+          const feeTime = feeDate.getTime();
+          matchesDate = feeTime >= start.getTime() && feeTime <= end.getTime();
+        } else {
+          matchesDate = true; // if range incomplete, don't filter by date
+        }
+      }
+
+      const matchesBranch = selectedBranch.value === "All" || selectedBranch.value === "" || fee.branch === selectedBranch.value;
+
+      return matchesSearch && matchesDate && matchesBranch;
+    });
 });
 
 const totalCount = computed(() => filteredFees.value.length);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize.value)));
 const pagedFees = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredFees.value.slice(start, start + pageSize.value);
+  const startIdx = (currentPage.value - 1) * pageSize.value;
+  return filteredFees.value.slice(startIdx, startIdx + pageSize.value);
 });
 
-const totalAmount = computed(() => {
-  return collectedFees.value.reduce((sum, fee) => sum + fee.amount, 0);
-});
-
-const paidAmount = computed(() => {
-  return collectedFees.value.filter(fee => fee.status === 'Paid').reduce((sum, fee) => sum + fee.amount, 0);
-});
-
-const pendingAmount = computed(() => {
-  return collectedFees.value.filter(fee => fee.status === 'Pending').reduce((sum, fee) => sum + fee.amount, 0);
-});
-
-const thisMonthAmount = computed(() => {
-  return collectedFees.value.filter(fee => fee.month === 'January 2024').reduce((sum, fee) => sum + fee.amount, 0);
-});
+// Totals reflect current (paid-only) filter
+const totalAmount = computed(() => filteredFees.value.reduce((sum, fee) => sum + fee.amount, 0));
+const transactionsCount = computed(() => filteredFees.value.length);
 
 onMounted(() => {
   // initial shimmer
@@ -131,7 +158,7 @@ onMounted(() => {
   }, 400);
 });
 
-watch([searchQuery, selectedMonth, selectedStatus, selectedMethod], () => {
+watch([searchQuery, selectedMonth, dateFilterMode, customStartDate, customEndDate, selectedBranch], () => {
   // show brief shimmer on filter/search change
   isLoading.value = true;
   currentPage.value = 1;
@@ -174,15 +201,6 @@ function collectNewFee() {
   router.push('/fees/collect');
 }
 
-function getStatusColor(status) {
-  const colors = {
-    "Paid": "bg-green-100 text-green-800",
-    "Pending": "bg-yellow-100 text-yellow-800",
-    "Overdue": "bg-red-100 text-red-800"
-  };
-  return colors[status] || "bg-gray-100 text-gray-800";
-}
-
 function getMethodColor(method) {
   const colors = {
     "Cash": "bg-blue-100 text-blue-800",
@@ -192,18 +210,6 @@ function getMethodColor(method) {
     "Check": "bg-pink-100 text-pink-800"
   };
   return colors[method] || "bg-gray-100 text-gray-800";
-}
-
-function getClassColor(class_name) {
-  const colors = {
-    "Biology": "bg-blue-100 text-blue-800",
-    "Physics": "bg-purple-100 text-purple-800",
-    "Chemistry": "bg-green-100 text-green-800",
-    "Mathematics": "bg-orange-100 text-orange-800",
-    "English": "bg-pink-100 text-pink-800",
-    "Bangla": "bg-indigo-100 text-indigo-800"
-  };
-  return colors[class_name] || "bg-gray-100 text-gray-800";
 }
 
 function formatCurrency(amount) {
@@ -219,7 +225,7 @@ function formatCurrency(amount) {
   <MainLayout>
     <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-6">
       <div class="mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- Header Section -->
+               <!-- Header Section -->
         <div class="mb-8">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
             <div class="flex items-center">
@@ -230,7 +236,7 @@ function formatCurrency(amount) {
               </div>
               <div>
                 <h1 class="text-xl sm:text-2xl font-bold text-gray-800">All Collected Fees</h1>
-                <p class="text-sm sm:text-base text-gray-600">Manage and view all fee collection records</p>
+                <p class="text-sm sm:text-base text-gray-600">View paid fee collection records</p>
               </div>
             </div>
             <div class="flex items-center">
@@ -247,64 +253,52 @@ function formatCurrency(amount) {
           </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Total Collected</p>
-              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(totalAmount) }}</p>
+        <!-- Stats Cards (paid totals for current filter) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-600">Total Collected</p>
+                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(totalAmount) }}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Paid Amount</p>
-              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(paidAmount) }}</p>
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-600">Transactions</p>
+                <p class="text-2xl font-bold text-gray-800">{{ transactionsCount }}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
-              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Pending Amount</p>
-              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(pendingAmount) }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
-              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">This Month</p>
-              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(thisMonthAmount) }}</p>
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-600">Displayed Period</p>
+                <p class="text-sm font-semibold text-gray-800">
+                  {{ dateFilterMode === 'today' ? 'Today' : dateFilterMode === 'month' ? currentMonthLabel : 'Custom Range' }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
       <!-- Filters and Search -->
       <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-8">
@@ -329,30 +323,41 @@ function formatCurrency(amount) {
           <!-- Filters -->
           <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 lg:space-x-4">
             <FormField
-              label="Month"
+              label="Date"
               type="select"
-              v-model="selectedMonth"
-              :options="months"
-              placeholder="All Months"
+              v-model="dateFilterMode"
+              :options="dateModes"
             />
 
             <FormField
-              label="Status"
-              type="select"
-              v-model="selectedStatus"
-              :options="statuses"
-              placeholder="All Status"
+              v-if="dateFilterMode === 'month'"
+              label="Current Month"
+              type="text"
+              :model-value="currentMonthLabel"
+              :readonly="true"
             />
 
             <FormField
-              label="Method"
-              type="select"
-              v-model="selectedMethod"
-              :options="methods"
-              placeholder="All Methods"
+              v-if="dateFilterMode === 'custom'"
+              label="Start"
+              type="date"
+              v-model="customStartDate"
             />
 
+            <FormField
+              v-if="dateFilterMode === 'custom'"
+              label="End"
+              type="date"
+              v-model="customEndDate"
+            />
 
+            <FormField
+              label="Branch"
+              type="select"
+              v-model="selectedBranch"
+              :options="branches"
+              placeholder="All Branches"
+            />
           </div>
         </div>
       </div>
@@ -361,7 +366,7 @@ function formatCurrency(amount) {
       <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <p class="text-gray-600">
           Showing <span class="font-semibold text-gray-800">{{ pagedFees.length }}</span>
-          of <span class="font-semibold text-gray-800">{{ totalCount }}</span> fee records
+          of <span class="font-semibold text-gray-800">{{ totalCount }}</span> paid records
         </p>
 
         <!-- Pagination Controls -->
@@ -407,14 +412,14 @@ function formatCurrency(amount) {
       <!-- Fees Table -->
       <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="min-w-full">
+          <table class="min-w-full edb-table">
             <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Month</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Method</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Branch</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collected By</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
@@ -438,7 +443,7 @@ function formatCurrency(amount) {
                   <div class="h-4 bg-gray-200 rounded w-24"></div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="h-6 bg-gray-200 rounded w-16"></div>
+                  <div class="h-6 bg-gray-200 rounded w-20"></div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="h-6 bg-gray-200 rounded w-20"></div>
@@ -484,18 +489,13 @@ function formatCurrency(amount) {
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="[
                     'px-2 py-1 rounded-full text-xs font-semibold',
-                    getStatusColor(fee.status)
-                  ]">
-                    {{ fee.status }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span :class="[
-                    'px-2 py-1 rounded-full text-xs font-semibold',
                     getMethodColor(fee.method)
                   ]">
                     {{ fee.method }}
                   </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ fee.branch }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ fee.collectedBy }}
@@ -574,7 +574,7 @@ function formatCurrency(amount) {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
           </svg>
         </div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">No fee records found</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No paid records found</h3>
         <p class="text-gray-600 mb-6">Try adjusting your search or filter criteria</p>
         <button
           @click="collectNewFee"

@@ -184,3 +184,34 @@
 .animation-delay-4000 {
     animation-delay: 4s;
 }
+
+/* Enhanced table readability (body cells only) */
+.edb-table td,
+.edb-table td *:not(svg):not(path),
+table.min-w-full td,
+table.min-w-full td *:not(svg):not(path) {
+    font-size: 1rem !important;
+    /* Tailwind text-base */
+    line-height: 1.5rem !important;
+}
+
+/* Table header improvements (apply broadly) */
+.edb-table thead th,
+table.min-w-full thead th {
+    font-size: 1.125rem !important;
+    /* Tailwind text-lg */
+    line-height: 1.75rem !important;
+    font-weight: 600;
+    color: #111827;
+    /* gray-900 */
+}
+
+/* Solid light green header background; remove gradients */
+.edb-table thead,
+table.min-w-full thead {
+    background-image: none !important;
+    background-color: #f1f1f1 !important;
+    /* emerald-50 */
+    border-bottom: 1px solid #cfcfcf;
+    /* emerald-200 */
+}
